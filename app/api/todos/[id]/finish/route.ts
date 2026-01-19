@@ -3,11 +3,12 @@ import { updateTodo } from '../../db';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('[API] PATCH /api/todos/[id]/finish - Request received for id:', params.id);
+  const { id } = await params;
+  console.log('[API] PATCH /api/todos/[id]/finish - Request received for id:', id);
   try {
-    const todo = await updateTodo(params.id, { finished: true });
+    const todo = await updateTodo(id, { finished: true });
     if (!todo) {
       return NextResponse.json(
         { error: 'Todo not found' },

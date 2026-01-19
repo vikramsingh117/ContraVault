@@ -3,13 +3,14 @@ import { updateTodo, deleteTodo, getTodoByPosition } from '../db';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('[API] PUT /api/todos/[id] - Request received for id:', params.id);
+  const { id } = await params;
+  console.log('[API] PUT /api/todos/[id] - Request received for id:', id);
   try {
     const updates = await request.json();
     console.log('[API] Update data:', updates);
-    const todo = await updateTodo(params.id, updates);
+    const todo = await updateTodo(id, updates);
     if (!todo) {
       return NextResponse.json(
         { error: 'Todo not found' },
@@ -29,11 +30,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('[API] DELETE /api/todos/[id] - Request received for id:', params.id);
+  const { id } = await params;
+  console.log('[API] DELETE /api/todos/[id] - Request received for id:', id);
   try {
-    const deleted = await deleteTodo(params.id);
+    const deleted = await deleteTodo(id);
     if (!deleted) {
       return NextResponse.json(
         { error: 'Todo not found' },

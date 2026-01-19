@@ -15,6 +15,9 @@ export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editTime, setEditTime] = useState('');
@@ -50,6 +53,8 @@ export default function Home() {
 
     console.log('[Frontend] Setting processing state to true');
     setIsProcessing(true);
+    setIsTyping(false);
+    setShowSuccess(false);
     try {
       console.log('[Frontend] Sending request to /api/todos');
       const response = await fetch('/api/todos', {
@@ -77,6 +82,20 @@ export default function Home() {
           ...todo,
           createdAt: new Date(todo.createdAt),
         }));
+        
+        // Find newly added todo for animation
+        if (data.intent === 'create' && data.result?.todo) {
+          const newTodoId = data.result.todo.id || data.todos[data.todos.length - 1]?.id;
+          if (newTodoId) {
+            setNewlyAddedId(newTodoId);
+            setShowSuccess(true);
+            setTimeout(() => {
+              setShowSuccess(false);
+              setNewlyAddedId(null);
+            }, 2000);
+          }
+        }
+        
         setTodos(todosWithDates);
       }
 
@@ -98,6 +117,7 @@ export default function Home() {
     const value = e.target.value;
     console.log('[Frontend] Input changed, new value:', value);
     setInput(value);
+    setIsTyping(true);
 
     // Clear existing timeout
     if (typingTimeoutRef.current) {
@@ -109,6 +129,7 @@ export default function Home() {
     console.log('[Frontend] Setting new 2-second timeout');
     typingTimeoutRef.current = setTimeout(() => {
       console.log('[Frontend] Timeout fired, processing input');
+      setIsTyping(false);
       if (value.trim()) {
         processInput(value);
       } else {
@@ -225,30 +246,60 @@ export default function Home() {
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col py-16 px-8 sm:px-16">
         <div className="w-full">
-          <h1 className="mb-8 text-3xl font-semibold text-black dark:text-zinc-50">
+          <h1 className="mb-8 text-3xl font-semibold text-[#845ec2] dark:text-[#b39cd0] transition-all-smooth">
             Todo List
           </h1>
 
-          <div className="mb-8">
-            <input
-              type="text"
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Type a todo, 'delete 2nd task', 'update 1st task to...', or 'finished task 2'..."
-              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-base text-black placeholder-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-400 dark:focus:border-zinc-500"
-              autoFocus
-              disabled={isProcessing}
-            />
+          <div className="mb-8 relative">
+            <div className="relative">
+              <input
+                type="text"
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Type a todo, 'delete 2nd task', 'update 1st task to...', or 'finished task 2'..."
+                className={`w-full rounded-lg border px-4 py-3 text-base placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all-smooth ${
+                  isTyping
+                    ? 'text-white border-[#845ec2] bg-[#845ec2] dark:border-[#b39cd0] dark:bg-[#845ec2] focus:border-[#b39cd0] focus:ring-[#b39cd0]/20 animate-glow'
+                    : isProcessing
+                    ? 'text-[#845ec2] border-[#b39cd0] bg-[#fbeaff] dark:border-[#b39cd0] dark:bg-[#845ec2]/20 dark:text-[#b39cd0] focus:border-[#845ec2] focus:ring-[#b39cd0]/20'
+                    : showSuccess
+                    ? 'text-[#00c9a7] border-[#00c9a7] bg-[#00c9a7]/10 dark:border-[#00c9a7] dark:bg-[#00c9a7]/20 dark:text-[#00c9a7] focus:border-[#00c9a7] focus:ring-[#00c9a7]/20'
+                    : 'text-black border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-400 focus:border-zinc-500 focus:ring-zinc-500/20'
+                }`}
+                autoFocus
+                disabled={isProcessing}
+              />
+              {isTyping && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 animate-fade-in">
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce-subtle" style={{ animationDelay: '0s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce-subtle" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce-subtle" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              )}
+            </div>
             {isProcessing && (
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-                Processing...
-              </p>
+              <div className="mt-3 flex items-center gap-2 animate-fade-in">
+                <div className="w-4 h-4 border-2 border-[#845ec2] border-t-transparent rounded-full animate-spin-slow"></div>
+                <p className="text-sm text-[#845ec2] dark:text-[#b39cd0] animate-pulse-slow">
+                  Processing with AI...
+                </p>
+              </div>
+            )}
+            {showSuccess && (
+              <div className="mt-3 flex items-center gap-2 animate-fade-in animate-bounce-subtle">
+                <svg className="w-5 h-5 text-[#00c9a7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <p className="text-sm text-[#00c9a7] font-medium">
+                  Todo added successfully!
+                </p>
+              </div>
             )}
           </div>
 
           {/* Active Todos */}
           <div className="mb-8">
-            <h2 className="mb-4 text-xl font-semibold text-black dark:text-zinc-50">
+            <h2 className="mb-4 text-xl font-semibold text-[#845ec2] dark:text-[#b39cd0] transition-all-smooth">
               Active Tasks
             </h2>
             <div className="space-y-2">
@@ -262,7 +313,12 @@ export default function Home() {
                   .map((todo, index) => (
                 <div
                   key={todo.id}
-                  className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                  className={`rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900 transition-all-smooth ${
+                    newlyAddedId === todo.id
+                      ? 'animate-scale-in border-green-300 bg-green-50/30 dark:border-green-700 dark:bg-green-950/20 shadow-lg'
+                      : 'animate-fade-in-up'
+                  }`}
+                  style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   {editingId === todo.id ? (
                     <div className="space-y-3">
@@ -305,18 +361,18 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={handleCancelEdit}
-                          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                        >
-                          Cancel
-                        </button>
+                          <button
+                            onClick={handleSaveEdit}
+                            className="rounded-lg bg-[#845ec2] px-4 py-2 text-sm font-medium text-white hover:bg-[#b39cd0] dark:bg-[#845ec2] dark:hover:bg-[#b39cd0] transition-all-smooth hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-[#845ec2]/40"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="rounded-lg border border-[#b39cd0] bg-white px-4 py-2 text-sm font-medium text-[#845ec2] hover:bg-[#fbeaff] dark:border-[#b39cd0] dark:bg-zinc-900 dark:text-[#b39cd0] dark:hover:bg-[#845ec2]/20 transition-all-smooth hover:scale-105 active:scale-95"
+                          >
+                            Cancel
+                          </button>
                       </div>
                     </div>
                   ) : (
@@ -339,19 +395,19 @@ export default function Home() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleFinish(todo.id)}
-                          className="rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-50 dark:border-green-700 dark:bg-zinc-900 dark:text-green-400 dark:hover:bg-green-900/20"
+                          className="rounded-lg border border-[#00c9a7] bg-white px-3 py-1.5 text-xs font-medium text-[#00c9a7] hover:bg-[#00c9a7] hover:text-white dark:border-[#00c9a7] dark:bg-zinc-900 dark:text-[#00c9a7] dark:hover:bg-[#00c9a7] dark:hover:text-white transition-all-smooth hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-[#00c9a7]/30"
                         >
                           Finish
                         </button>
                         <button
                           onClick={() => handleEdit(todo)}
-                          className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                          className="rounded-lg border border-[#b39cd0] bg-white px-3 py-1.5 text-xs font-medium text-[#845ec2] hover:bg-[#845ec2] hover:text-white dark:border-[#b39cd0] dark:bg-zinc-900 dark:text-[#b39cd0] dark:hover:bg-[#845ec2] dark:hover:text-white transition-all-smooth hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-[#845ec2]/30"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(todo.id)}
-                          className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                          className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-500 hover:text-white dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white transition-all-smooth hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-red-500/30"
                         >
                           Delete
                         </button>
@@ -367,7 +423,7 @@ export default function Home() {
           {/* Finished Todos */}
           {todos.filter((t) => t.finished).length > 0 && (
             <div>
-              <h2 className="mb-4 text-xl font-semibold text-black dark:text-zinc-50">
+              <h2 className="mb-4 text-xl font-semibold text-[#845ec2] dark:text-[#b39cd0] transition-all-smooth">
                 Finished Tasks
               </h2>
               <div className="space-y-2">
@@ -376,7 +432,8 @@ export default function Home() {
                   .map((todo, index) => (
                     <div
                       key={todo.id}
-                      className="rounded-lg border border-zinc-200 bg-white p-4 opacity-75 dark:border-zinc-800 dark:bg-zinc-900"
+                      className="rounded-lg border border-zinc-200 bg-white p-4 opacity-75 dark:border-zinc-800 dark:bg-zinc-900 animate-fade-in-up transition-all-smooth"
+                      style={{ animationDelay: `${index * 0.05}s` }}
                     >
                       <div className="flex items-start gap-3">
                         <span className="mt-1 text-sm font-medium text-zinc-500 dark:text-zinc-400">
@@ -397,7 +454,7 @@ export default function Home() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleDelete(todo.id)}
-                            className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-900/20"
+                            className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-500 hover:text-white dark:border-red-700 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-500 dark:hover:text-white transition-all-smooth hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-red-500/30"
                           >
                             Delete
                           </button>
