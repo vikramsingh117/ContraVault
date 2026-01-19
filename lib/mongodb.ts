@@ -3,7 +3,7 @@ import { MongoClient, Db } from 'mongodb';
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your Mongo URI to .env.local');
 }
-
+// test
 const uri: string = process.env.MONGODB_URI;
 const options = {};
 
